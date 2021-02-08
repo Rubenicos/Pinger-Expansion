@@ -1,0 +1,22 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.extendedclip.expansion'
+version = '1.1'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+repositories {
+    maven { url = "https://hub.spigotmc.org/nexus/content/repositories/snapshots/" }
+    maven { url = "http://repo.extendedclip.com/content/repositories/placeholderapi/" }
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly "org.spigotmc:spigot-api:1.16.4-R0.1-SNAPSHOT"
+    compile ("me.clip:placeholderapi:2.10.9") {
+    	exclude group: 'org.bstats', module: 'bstats'
+    }
+}
