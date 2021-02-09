@@ -2,7 +2,7 @@ plugins {
     id 'java'
 }
 
-group = 'com.extendedclip.expansion'
+group = 'com.extendedclip.expansion.pinger'
 version = '1.1'
 
 sourceCompatibility = 1.8
@@ -16,7 +16,5 @@ repositories {
 
 dependencies {
     compileOnly "org.spigotmc:spigot-api:1.16.4-R0.1-SNAPSHOT"
-    compile ("me.clip:placeholderapi:2.10.9") {
-    	exclude group: 'org.bstats', module: 'bstats'
-    }
+    compileOnly "me.clip:placeholderapi:2.10.9"
 }

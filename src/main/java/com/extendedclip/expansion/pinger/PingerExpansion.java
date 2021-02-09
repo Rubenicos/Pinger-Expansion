@@ -95,7 +95,7 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
 
     @Override
     public String getVersion() {
-        return "1.0.1";
+        return "1.1.0";
     }
 
     @Override
@@ -105,41 +105,43 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
         final String[] args = params.split("_", 3);
         if (args.length < 2) return "Enought args";
 
-        final String[] data = args[0].split(":", 2);
-        final int num = parseInt(data[0], getEnum(data[0]));
-        if (num < 0 && !data[0].contains("online")) return "Invalid Placeholder";
+        final int num = parseInt(args[0], getEnum(args[0]));
+        if (num < 0 && !args[0].contains("online")) return "Invalid Placeholder";
 
         if (args[1].toLowerCase().startsWith("iptable:")) {
-            if (data[0].contains("online")) return "IpTables doesn't support " + data[0] + " placeholder";
+            if (args[0].contains("online")) return "IpTables doesn't support " + args[0] + " placeholder";
 
-            final String table = args[1].split(":", 2)[1].toLowerCase();
-            if (iptables.containsKey(table)) {
+            final String[] table = args[1].split(":", 3);
+            if (iptables.containsKey(table[1].toLowerCase())) {
                 final List<Ping> pingList = new ArrayList<>();
-                iptables.get(table).forEach(ip -> {
-                    final Ping ping = getPing(ip, 30);
+                iptables.get(table[1].toLowerCase()).forEach(ip -> {
+                    final Ping ping = getPing(ip, interval);
                     if (ping.getData().length > 1) pingList.add(ping);
                 });
+                String result;
                 if (num == 4) {
                     int count = 0;
                     for (Ping ping : pingList) {
                         count += parseInt(ping.getData()[4], 0);
                     }
-                    return String.valueOf(count);
+                    result = String.valueOf(count);
                 } else {
                     final List<String> list = new ArrayList<>();
                     pingList.forEach(ping -> list.add(ping.getData()[num]));
-                    return String.join((data.length > 1 ? data[1] : ", "), list);
+                    result = String.join((table.length > 2 ? table[2] : ", "), list);
                 }
+                cache.put(params, result);
+                Bukkit.getScheduler().runTaskLaterAsynchronously(getPlaceholderAPI(), () -> cache.remove(params), (args.length > 2 ? parseInt(args[2], interval) : interval));
+                return result;
             } else {
                 return "Invalid Table";
             }
         }
 
-        Ping ping = getPing(args[1], (args.length > 2 ? parseInt(args[2], 30) : 30));
-        if (ping.getData().length < 1) ping = null;
-        if (data[0].contains("online")) return (ping != null) ? online : offline;
+        Ping ping = getPing(args[1], (args.length > 2 ? parseInt(args[2], interval) : interval));
+        if (args[0].contains("online")) return (!ping.getData()[0].equals("-1")) ? online : offline;
 
-        return (ping != null ? ping.getData()[num] : (data.length > 1 ? data[1] : ""));
+        return ping.getData()[num];
     }
 
     private Ping getPing(String arg, int interval) {
@@ -203,7 +205,7 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
 
         private final int timeout;
 
-        private String[] data;
+        private String[] data = {"-1", "-1", "-1", "", "0", "0"};
 
         public Ping(String address, int port, int timeout) {
             this.address = address;
@@ -256,7 +258,7 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
                 }
 
                 String string = new String(chars);
-                if (string.startsWith("§")) data = string.split("\000");
+                if (string.startsWith("§")) data = string.substring(1).split("\000");
 
                 dataOutputStream.close();
                 outputStream.close();
