@@ -3,10 +3,9 @@ plugins {
 }
 
 group = 'com.extendedclip.expansion.pinger'
-version = '1.1'
+version = '1.1.0'
 
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+compileJava.options.encoding = 'UTF-8'
 
 repositories {
     maven { url = "https://hub.spigotmc.org/nexus/content/repositories/snapshots/" }
@@ -15,6 +14,6 @@ repositories {
 }
 
 dependencies {
-    compileOnly "org.spigotmc:spigot-api:1.16.4-R0.1-SNAPSHOT"
+    compileOnly "org.spigotmc:spigot-api:1.16.5-R0.1-SNAPSHOT"
     compileOnly "me.clip:placeholderapi:2.10.9"
 }

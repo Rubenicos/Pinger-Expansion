@@ -51,15 +51,23 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
         mainTask = Bukkit.getScheduler().runTaskTimerAsynchronously(getPlaceholderAPI(), () -> {
             if (mainPings.isEmpty()) return;
             final Long current = System.currentTimeMillis() / 1000;
+            final List<String> toDelete = new ArrayList<>();
+            final List<String> toPing = new ArrayList<>();
             mainPings.forEach((ip, ping) -> {
-                if ((current - lastRequest.get(ip)) > 50) {
-                    mainPings.remove(ip);
-                    lastRequest.remove(ip);
+                if ((current - lastRequest.get(ip)) > (interval * 2)) {
+                    toDelete.add(ip);
                 } else {
-                    try {
-                        if (!ping.fetchData()) mainPings.remove(ip);
-                    } catch (Exception ignored) { }
+                    toPing.add(ip);
                 }
+            });
+            toPing.forEach(ip -> {
+                try {
+                    if (!mainPings.get(ip).fetchData()) toDelete.add(ip);
+                } catch (Exception ignored) { }
+            });
+            toDelete.forEach(ip -> {
+                lastRequest.remove(ip);
+                mainPings.remove(ip);
             });
         }, 20L, 20L * interval).getTaskId();
     }
@@ -85,7 +93,7 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
 
     @Override
     public String getAuthor() {
-        return "clip";
+        return "clip & Rubenicos";
     }
 
     @Override
@@ -103,14 +111,12 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
         if (cache.containsKey(params)) return cache.get(params);
 
         final String[] args = params.split("_", 3);
-        if (args.length < 2) return "Enought args";
+        if (args.length < 2) return "Enough args";
 
         final int num = parseInt(args[0], getEnum(args[0]));
-        if (num < 0 && !args[0].contains("online")) return "Invalid Placeholder";
+        if (num > 6) return "Invalid Placeholder";
 
         if (args[1].toLowerCase().startsWith("iptable:")) {
-            if (args[0].contains("online")) return "IpTables doesn't support " + args[0] + " placeholder";
-
             final String[] table = args[1].split(":", 3);
             if (iptables.containsKey(table[1].toLowerCase())) {
                 final List<Ping> pingList = new ArrayList<>();
@@ -119,15 +125,25 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
                     if (ping.getData().length > 1) pingList.add(ping);
                 });
                 String result;
-                if (num == 4) {
-                    int count = 0;
-                    for (Ping ping : pingList) {
-                        count += parseInt(ping.getData()[4], 0);
+                if (table.length > 2 && table[2].toLowerCase().equals("sum")) {
+                    if (num == 2) {
+                        result = "Game version is not a Integer";
+                    } else if (num == 3) {
+                        result = "Server motd is not a Integer";
+                    } else {
+                        int count = 0;
+                        for (Ping ping : pingList) {
+                            count += (int) ping.getData()[num];
+                        }
+                        result = String.valueOf(count);
                     }
-                    result = String.valueOf(count);
                 } else {
                     final List<String> list = new ArrayList<>();
-                    pingList.forEach(ping -> list.add(ping.getData()[num]));
+                    if (num == 6) {
+                        pingList.forEach(ping -> list.add((ping.isOnline()) ? online : offline));
+                    } else {
+                        pingList.forEach(ping -> list.add(String.valueOf(ping.getData()[num])));
+                    }
                     result = String.join((table.length > 2 ? table[2] : ", "), list);
                 }
                 cache.put(params, result);
@@ -139,9 +155,9 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
         }
 
         Ping ping = getPing(args[1], (args.length > 2 ? parseInt(args[2], interval) : interval));
-        if (args[0].contains("online")) return (!ping.getData()[0].equals("-1")) ? online : offline;
+        if (num == 6) return (ping.isOnline()) ? online : offline;
 
-        return ping.getData()[num];
+        return String.valueOf(ping.getData()[num]);
     }
 
     private Ping getPing(String arg, int interval) {
@@ -152,16 +168,12 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
         final String[] ip = arg.split(":", 3);
         final Ping ping = new Ping(ip[0], (ip.length > 1 ? parseInt(ip[1], 25565) : 25565), (ip.length > 2 ? parseInt(ip[2], 2000) : 2000));
         if (interval != this.interval) {
-            Bukkit.getScheduler().runTaskAsynchronously(getPlaceholderAPI(), () -> {
-                if (ping.fetchData()) {
-                    pings.put(arg, ping);
-                    Bukkit.getScheduler().runTaskLaterAsynchronously(getPlaceholderAPI(), () -> pings.remove(arg), interval * 20);
-                }
-            });
+            if (ping.fetchData()) {
+                pings.put(arg, ping);
+                Bukkit.getScheduler().runTaskLaterAsynchronously(getPlaceholderAPI(), () -> pings.remove(arg), interval * 20);
+            }
         } else {
-            Bukkit.getScheduler().runTaskAsynchronously(getPlaceholderAPI(), () -> {
-                if (ping.fetchData()) mainPings.put(arg, ping);
-            });
+            if (ping.fetchData()) mainPings.put(arg, ping);
         }
         return ping;
     }
@@ -185,8 +197,10 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
             case "max":
             case "maxplayers":
                 return 5;
+            case "online":
+                return 6;
             default:
-                return -1;
+                return 7;
         }
     }
 
@@ -205,7 +219,9 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
 
         private final int timeout;
 
-        private String[] data = {"-1", "-1", "-1", "", "0", "0"};
+        private boolean online = false;
+
+        private Object[] data = {-1, -1, "unknown", "", 0, 0};
 
         public Ping(String address, int port, int timeout) {
             this.address = address;
@@ -213,15 +229,39 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
             this.timeout = timeout;
         }
 
-        public String[] getData() {
+        public String getAddress() {
+            return address;
+        }
+
+        public int getPort() {
+            return port;
+        }
+
+        public int getTimeout() {
+            return timeout;
+        }
+
+        public boolean isOnline() {
+            return online;
+        }
+
+        public void setOnline() {
+            online = true;
+        }
+
+        public Object[] getData() {
             return data;
+        }
+
+        public void setData(Object[] data) {
+            this.data = data;
         }
 
         public boolean fetchData() {
             try {
                 Socket socket = new Socket();
-                socket.setSoTimeout(timeout);
-                socket.connect(new InetSocketAddress(address, port), timeout);
+                socket.setSoTimeout(getTimeout());
+                socket.connect(new InetSocketAddress(getAddress(), getPort()), getTimeout());
 
                 OutputStream outputStream = socket.getOutputStream();
                 DataOutputStream dataOutputStream = new DataOutputStream(outputStream);
@@ -231,7 +271,16 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
 
                 dataOutputStream.write(new byte[] { -2, 1 });
 
-                if (inputStream.read() != 255) {
+                int packetId = inputStream.read();
+                if (packetId == -1) {
+                    try {
+                        socket.close();
+                    } catch (IOException ignored) {}
+                    socket = null;
+                    return false;
+                }
+
+                if (packetId != 255) {
                     try {
                         socket.close();
                     } catch (IOException ignored) {}
@@ -258,7 +307,23 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
                 }
 
                 String string = new String(chars);
-                if (string.startsWith("§")) data = string.substring(1).split("\000");
+                if (string.startsWith("§")) {
+                    String[] split = string.split("\000");
+                    setData(new Object[] {
+                            Integer.parseInt(split[0].substring(1)), // Ping version
+                            Integer.parseInt(split[1]), // Protocol version
+                            split[2], // Game version
+                            split[3], // Motd
+                            Integer.parseInt(split[4]), // Players online
+                            Integer.parseInt(split[5])}); // Max players
+                } else {
+                    String[] split = string.split("§");
+                    setData(new Object[] {"-1", "-1", "-1", // Ping, protocol and game version are invalid on this case
+                            split[0], // Motd
+                            Integer.parseInt(split[1]), // Players online
+                            Integer.parseInt(split[2])}); // Max players
+                }
+                setOnline();
 
                 dataOutputStream.close();
                 outputStream.close();
