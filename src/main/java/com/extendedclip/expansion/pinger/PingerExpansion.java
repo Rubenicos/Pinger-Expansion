@@ -52,18 +52,12 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
             if (mainPings.isEmpty()) return;
             final Long current = System.currentTimeMillis() / 1000;
             final List<String> toDelete = new ArrayList<>();
-            final List<String> toPing = new ArrayList<>();
             mainPings.forEach((ip, ping) -> {
                 if ((current - lastRequest.get(ip)) > (interval * 2)) {
                     toDelete.add(ip);
                 } else {
-                    toPing.add(ip);
+                    ping.fetchData();
                 }
-            });
-            toPing.forEach(ip -> {
-                try {
-                    if (!mainPings.get(ip).fetchData()) toDelete.add(ip);
-                } catch (Exception ignored) { }
             });
             toDelete.forEach(ip -> {
                 lastRequest.remove(ip);
@@ -120,10 +114,7 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
             final String[] table = args[1].split(":", 3);
             if (iptables.containsKey(table[1].toLowerCase())) {
                 final List<Ping> pingList = new ArrayList<>();
-                iptables.get(table[1].toLowerCase()).forEach(ip -> {
-                    final Ping ping = getPing(ip, interval);
-                    if (ping.getData().length > 1) pingList.add(ping);
-                });
+                iptables.get(table[1].toLowerCase()).forEach(ip -> pingList.add(getPing(ip, interval)));
                 String result;
                 if (table.length > 2 && table[2].toLowerCase().equals("sum")) {
                     if (num == 2) {
@@ -168,12 +159,14 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
         final String[] ip = arg.split(":", 3);
         final Ping ping = new Ping(ip[0], (ip.length > 1 ? parseInt(ip[1], 25565) : 25565), (ip.length > 2 ? parseInt(ip[2], 2000) : 2000));
         if (interval != this.interval) {
-            if (ping.fetchData()) {
-                pings.put(arg, ping);
+            pings.put(arg, ping);
+            Bukkit.getScheduler().runTaskAsynchronously(getPlaceholderAPI(), () -> {
+                pings.get(arg).fetchData();
                 Bukkit.getScheduler().runTaskLaterAsynchronously(getPlaceholderAPI(), () -> pings.remove(arg), interval * 20);
-            }
+            });
         } else {
-            if (ping.fetchData()) mainPings.put(arg, ping);
+            mainPings.put(arg, ping);
+            Bukkit.getScheduler().runTaskAsynchronously(getPlaceholderAPI(), () -> mainPings.get(arg).fetchData());
         }
         return ping;
     }
@@ -257,7 +250,7 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
             this.data = data;
         }
 
-        public boolean fetchData() {
+        public void fetchData() {
             try {
                 Socket socket = new Socket();
                 socket.setSoTimeout(getTimeout());
@@ -277,7 +270,7 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
                         socket.close();
                     } catch (IOException ignored) {}
                     socket = null;
-                    return false;
+                    return;
                 }
 
                 if (packetId != 255) {
@@ -285,7 +278,7 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
                         socket.close();
                     } catch (IOException ignored) {}
                     socket = null;
-                    return false;
+                    return;
                 }
 
                 final int length = inputStreamReader.read();
@@ -294,7 +287,7 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
                         socket.close();
                     } catch (IOException ignored) {}
                     socket = null;
-                    return false;
+                    return;
                 }
 
                 char[] chars = new char[length];
@@ -303,7 +296,7 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
                         socket.close();
                     } catch (IOException ignored) {}
                     socket = null;
-                    return false;
+                    return;
                 }
 
                 String string = new String(chars);
@@ -330,10 +323,7 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
                 inputStreamReader.close();
                 inputStream.close();
                 socket.close();
-            } catch (IOException exception) {
-                return false;
-            }
-            return true;
+            } catch (IOException ignored) { }
         }
     }
 }
