@@ -113,7 +113,7 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
             final String[] table = args[1].split(":", 3);
             if (table.length < 2) {
                 return "Invalid Table";
-            } else if (table.length > 2 && args[2].toLowerCase().equals("sum")) {
+            } else if (table.length > 2 && table[2].toLowerCase().equals("sum")) {
                 int total = 0;
                 for (String ip : settings.getIpTable(table[1])) {
                     total = total + parseInt(getPing(args, ip).getData(args[0]), 0);
@@ -161,15 +161,15 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
 
         int refresh = (args.length > 2 ? parseInt(args[2], interval) : interval);
         if (ping == null) {
-            return createPing(args, refresh);
+            return createPing(ip, args, refresh);
         } else {
             resolveInterval(ip, ping, refresh);
             return ping;
         }
     }
 
-    private Ping createPing(String[] args, int refresh) {
-        String[] ip = args[1].split(":");
+    private Ping createPing(String identifier, String[] args, int refresh) {
+        String[] ip = identifier.split(":");
         Ping ping;
         if (args[0].toLowerCase().startsWith("api:")) {
             String[] api = args[0].split(":");
@@ -178,7 +178,7 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
         } else {
             ping = new DefaultPing(ip[0], (ip.length > 1 ? parseInt(ip[1], 25565) : 25565), (ip.length > 2 ? parseInt(ip[2], 2000) : 2000));
         }
-        resolveInterval(args[1], ping, refresh);
+        resolveInterval(identifier, ping, refresh);
         return ping;
     }
 
