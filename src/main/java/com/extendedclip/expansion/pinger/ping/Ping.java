@@ -12,11 +12,11 @@ public abstract class Ping {
 
     private boolean online = false;
 
-    public boolean isActive(long time) {
-        return ((time - lastRequest)) < (PingerExpansion.interval + 10);
+    public long getLastRequest() {
+        return lastRequest;
     }
 
-    public void update() {
+    public void onRequest() {
         lastRequest = System.currentTimeMillis() / 1000;
     }
 

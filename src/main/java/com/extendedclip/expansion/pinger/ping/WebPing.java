@@ -50,7 +50,8 @@ public class WebPing extends Ping {
 
     @Override
     public String getData(String type) {
-        update();
+        onRequest();
+        if (data == null) return "null";
         String[] parts = type.split("[.\\[\\]]");
         if (parts.length == 1) {
             return data.get(type).getAsString();

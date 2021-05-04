@@ -19,7 +19,6 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
     public static int cachetime = 20;
     public static int interval = 30;
 
-    private boolean onTask = false;
     private int mainTask = -1;
     private final Map<String, Ping> mainPings = new HashMap<>();
 
@@ -43,16 +42,12 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
         }
 
         mainTask = Bukkit.getScheduler().runTaskTimerAsynchronously(getPlaceholderAPI(), () -> {
-            if (onTask) return;
-            onTask = true;
-
             if (mainPings.isEmpty()) return;
 
-            long time = System.currentTimeMillis() / 1000;
             final List<String> toDelete = new ArrayList<>();
 
             mainPings.forEach((ip, ping) -> {
-                if (!ping.isActive(time)) {
+                if (((System.currentTimeMillis() / 1000) - ping.getLastRequest()) > (interval + 10)) {
                     toDelete.add(ip);
                 } else {
                     ping.fetchData();
@@ -60,7 +55,6 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
             });
 
             toDelete.forEach(mainPings::remove);
-            onTask = false;
         }, 20L, 20L * interval).getTaskId();
     }
 
@@ -133,7 +127,7 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
                 result = String.join((table.length > 2 ? table[2] : ", "), data);
             }
         } else {
-            Ping ping = getPing(args);
+            Ping ping = getPing(args, args[1]);
             result = ping.getData(args[0]);
         }
 
@@ -149,10 +143,6 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
         }
         cache.put(identifier, result);
         return result;
-    }
-
-    private Ping getPing(String[] args) {
-        return getPing(args, args[1]);
     }
 
     private Ping getPing(String[] args, String ip) {
@@ -197,15 +187,27 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
             mainPings.remove(identifier);
             if (!pings.containsKey(identifier)) {
                 pings.put(identifier, ping);
-                pingTasks.put(identifier, Bukkit.getScheduler().runTaskTimerAsynchronously(getPlaceholderAPI(), () -> pings.get(identifier).fetchData(), 20L, 20L * refresh).getTaskId());
+                pingTasks.put(identifier, Bukkit.getScheduler().runTaskTimerAsynchronously(getPlaceholderAPI(), () -> {
+                    if (((System.currentTimeMillis() / 1000) - ping.getLastRequest()) > (interval + 10)) {
+                        stopPing(identifier);
+                    } else {
+                        pings.get(identifier).fetchData();
+                    }
+                }, 20L, 20L * refresh).getTaskId());
             }
         } else {
-            mainPings.putIfAbsent(identifier, ping);
-            if (pings.containsKey(identifier)) {
-                pings.remove(identifier);
-                Bukkit.getScheduler().cancelTask(pingTasks.get(identifier));
-                pingTasks.remove(identifier);
+            if (!mainPings.containsKey(identifier)) {
+                mainPings.put(identifier, ping);
             }
+            stopPing(identifier);
+        }
+    }
+
+    private void stopPing(String identifier) {
+        if (pings.containsKey(identifier)) {
+            pings.remove(identifier);
+            Bukkit.getScheduler().cancelTask(pingTasks.get(identifier));
+            pingTasks.remove(identifier);
         }
     }
 

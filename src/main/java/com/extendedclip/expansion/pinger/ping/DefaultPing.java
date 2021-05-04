@@ -83,7 +83,7 @@ public class DefaultPing extends Ping {
 
     @Override
     public String getData(String type) {
-        update();
+        onRequest();
         switch (type.toLowerCase()) {
             case "pingversion":
             case "pingv":

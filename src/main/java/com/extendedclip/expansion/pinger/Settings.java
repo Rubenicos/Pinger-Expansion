@@ -73,7 +73,7 @@ public class Settings extends YamlConfiguration {
 
     @SuppressWarnings("unchecked")
     private List<String> getIpTable0(String path) {
-        final Object object = get(path);
+        final Object object = get(path, new ArrayList<String>());
         if (object instanceof List) {
             return (List<String>) cache(path, object);
         }

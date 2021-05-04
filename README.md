@@ -22,11 +22,14 @@ This placeholder has different ways to use
 * `gameversion | version` - Server game version
 * `motd` - Server motd
 * `count | players` - Number of players online
-* `max | maxplayers` - Max number of players
+* `max | maxplayers` - Maximum number of players
 * `online` - Check if server are online
 
 ## Recoded Version
 What's new in this recoded version?
+* **Different config file:** Now Pinger config location is at plugins/PlaceholderAPI/expansions/Pinger/settings.yml
+* **Custom times:** You can set your own timeout and refresh interval per ip ping
+* **Cache requests:** Option to cache the placeholder by putting `_cache:[seconds]` at final.
 * **IP tables:** Get data from multiple IPs at the same time (with the option to make a sum).
 * **Web API:** Get data using a web API instead default method.
 
