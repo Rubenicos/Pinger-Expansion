@@ -1,7 +1,7 @@
 package com.extendedclip.expansion.pinger.ping;
 
 import com.extendedclip.expansion.pinger.PingerExpansion;
-import me.clip.placeholderapi.libs.gson.*;
+import com.google.gson.*;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
@@ -53,9 +53,6 @@ public class WebPing extends Ping {
         onRequest();
         if (data == null) return "null";
         String[] parts = type.split("[.\\[\\]]");
-        if (parts.length == 1) {
-            return data.get(type).getAsString();
-        }
 
         JsonElement result = data;
 
@@ -64,8 +61,7 @@ public class WebPing extends Ping {
             if (key.isEmpty()) continue;
 
             if (result == null) {
-                result = JsonNull.INSTANCE;
-                break;
+                return "null";
             }
 
             if (result.isJsonObject()) {
@@ -78,6 +74,6 @@ public class WebPing extends Ping {
             }
         }
 
-        return result.getAsString();
+        return (result != null ? result.getAsString() : "null");
     }
 }

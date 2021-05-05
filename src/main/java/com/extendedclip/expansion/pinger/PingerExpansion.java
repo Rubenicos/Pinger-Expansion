@@ -90,7 +90,7 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
 
     @Override
     public String getVersion() {
-        return "1.1.0";
+        return "1.1.2";
     }
 
     @Override
