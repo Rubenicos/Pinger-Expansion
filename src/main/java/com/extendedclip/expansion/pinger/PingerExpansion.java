@@ -25,6 +25,7 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
     private final Map<String, Integer> pingTasks = new HashMap<>();
     private final Map<String, Ping> pings = new HashMap<>();
 
+    private final List<String> toDelete = new ArrayList<>();
     private final Map<String, String> cache = new HashMap<>();
 
     @Override
@@ -43,8 +44,6 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
 
         mainTask = Bukkit.getScheduler().runTaskTimerAsynchronously(getPlaceholderAPI(), () -> {
             if (mainPings.isEmpty()) return;
-
-            final List<String> toDelete = new ArrayList<>();
 
             mainPings.forEach((ip, ping) -> {
                 if (((System.currentTimeMillis() / 1000) - ping.getLastRequest()) > (interval + 10)) {
@@ -184,7 +183,9 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
 
     private void resolveInterval(String identifier, Ping ping, int refresh) {
         if (refresh != interval) {
-            mainPings.remove(identifier);
+            if (mainPings.containsKey(identifier) && !toDelete.contains(identifier)) {
+                toDelete.add(identifier);
+            }
             if (!pings.containsKey(identifier)) {
                 pings.put(identifier, ping);
                 pingTasks.put(identifier, Bukkit.getScheduler().runTaskTimerAsynchronously(getPlaceholderAPI(), () -> {
