@@ -1,7 +1,5 @@
 package com.extendedclip.expansion.pinger.ping;
 
-import com.extendedclip.expansion.pinger.PingerExpansion;
-
 public abstract class Ping {
 
     String address;

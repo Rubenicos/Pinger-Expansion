@@ -16,8 +16,8 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
 
     public static String online = "&aOnline";
     public static String offline = "&cOffline";
-    public static int cachetime = 20;
-    public static int interval = 30;
+    private int cachetime = 20;
+    private int interval = 30;
 
     private int mainTask = -1;
     private final Map<String, Ping> mainPings = new HashMap<>();
@@ -104,7 +104,7 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
         int time = 0;
         if (save) {
             String[] s = args[args.length - 1].split(":");
-            time = (s.length > 1 ? parseInt(s[1], 20) : 20);
+            time = (s.length > 1 ? parseInt(s[1], cachetime) : cachetime);
             args = Arrays.copyOf(args, args.length - 1);
         }
 
@@ -136,7 +136,7 @@ public class PingerExpansion extends PlaceholderExpansion implements Cacheable, 
 
     private String cache(String identifier, String result, int time) {
         if (time < 1) {
-            time = 20;
+            time = cachetime;
         }
         if (!cache.containsKey(identifier)) {
             Bukkit.getScheduler().runTaskLaterAsynchronously(getPlaceholderAPI(), () -> cache.remove(identifier), 20L * time);
