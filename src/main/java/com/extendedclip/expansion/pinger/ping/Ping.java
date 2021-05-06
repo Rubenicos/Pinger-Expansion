@@ -7,6 +7,8 @@ public abstract class Ping {
     int timeout;
 
     long lastRequest;
+    int pingTask;
+    int interval;
 
     private boolean online = false;
 
@@ -16,6 +18,22 @@ public abstract class Ping {
 
     public void onRequest() {
         lastRequest = System.currentTimeMillis() / 1000;
+    }
+
+    public int getPingTask() {
+        return pingTask;
+    }
+
+    public void setPingTask(int pingTask) {
+        this.pingTask = pingTask;
+    }
+
+    public int getInterval() {
+        return interval;
+    }
+
+    public void setInterval(int interval) {
+        this.interval = interval;
     }
 
     public boolean isOnline() {
